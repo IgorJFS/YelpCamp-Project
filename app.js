@@ -7,11 +7,11 @@ const Campground = require('./models/campground');
 const methodOverride = require('method-override');
 
 //conexão com o banco de dados MongoDB
-mongoose.connect('mongodb://localhost:27017/yelpcamp')
+mongoose.connect(process.env.DB_URL || 'mongodb://localhost:27017/yelpcamp')
 .then(() => {
   console.log(chalk.green('Conexão com o MongoDB estabelecida com sucesso yay :D!'));
 }).catch(err => {
-  console.error(chalk.red('Deu ruim com o MongoDB :( ) :', err));
+  console.error(chalk.red('Deu ruim com o MongoDB :(  Mensagem de error =>  ', err));
 });
 
 
@@ -47,7 +47,7 @@ app.post('/campgrounds', async (req, res) => {
   const campground = new Campground(req.body.campground);
   try {
     await campground.save();
-    console.log(chalk.green('Campground criado com sucesso!'));
+    console.log(chalk.green('✅Campground criado com sucesso!'));
     res.redirect(`/campgrounds/${campground._id}`);
   } catch (err) {
     console.error(chalk.red('Erro ao criar campground:', err));
@@ -58,7 +58,9 @@ app.post('/campgrounds', async (req, res) => {
   app.get('/campgrounds/:id', async (req, res) => {
   try {
     const campground = await Campground.findById(req.params.id);
-    res.render('campgrounds/show', { campground });
+    // Pega o parâmetro de tamanho da query string
+    const imageSize = req.query.size || 'default';
+    res.render('campgrounds/show', { campground, imageSize });
   } catch (err) {
     console.error(chalk.red('Erro ao buscar campground:', err));
     res.status(500).send('Erro ao buscar campground');
