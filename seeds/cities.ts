@@ -1,4 +1,14 @@
-module.exports = [
+export interface City {
+    city: string;
+    growth_from_2000_to_2013: string;
+    latitude: number;
+    longitude: number;
+    population: string;
+    rank: string;
+    state: string;
+}
+
+export const cities = [
     {
         city: "New York",
         growth_from_2000_to_2013: "4.8%",

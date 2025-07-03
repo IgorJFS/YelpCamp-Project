@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",                          // Compatível com async/await moderno
+    "module": "CommonJS",                        // Para rodar no Node
+    "moduleResolution": "node",                  // Resolve módulos no estilo Node.js
+    "outDir": "./",                              // Gera os .js no mesmo lugar dos .ts (opcional)
+    "strict": true,                              // Liga as checagens fortes de tipos
+    "esModuleInterop": true,                     // Permite importação default de libs CommonJS
+    "skipLibCheck": true,                        // Pula checagem de tipos em node_modules
+    "forceConsistentCasingInFileNames": true,    // Evita bugs de case em arquivos
+    "resolveJsonModule": true,                   // Permite importar JSON direto
+    "types": ["node"],                           // Inclui tipagens do Node.js
+    "allowJs": true                              // Permite misturar arquivos JS (se tiver)
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}
