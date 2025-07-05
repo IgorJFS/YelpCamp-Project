@@ -1,10 +1,13 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import mongoose from 'mongoose';
 import chalk from 'chalk';
+import ExpressError from './utils/expressError';
+import catchAsync from './utils/catchAsync';
 import Campground from './models/campground'; 
 import methodOverride from 'method-override';
-const ejsMate = require('ejs-mate'); // Importando ejs-mate para suporte a layouts e partials
+import { validateCampground } from './middlewares/validateCampground';
+const ejsMate = require('ejs-mate');
 
 //conexão com o banco de dados MongoDB
 async function connectDb() {
@@ -29,26 +32,27 @@ app.use(methodOverride('_method')); // isso aqui permite o uso de métodos HTTP 
 
 const port = 3000;
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (req, res) => {
   res.render('home', { title: 'YelpCamp' });
 });
 
-app.get('/campgrounds', async (req: Request, res: Response) => {
+app.get('/campgrounds', async (req, res) => {
   try {
     const campgrounds = await Campground.find({});
     res.render('campgrounds/index', { campgrounds });
   } catch (err) {
     console.error(chalk.red('Erro ao buscar campgrounds:', err));
     res.status(500).send('Erro ao buscar campgrounds');
-  }});
+  }
+});
 
-  app.get('/campgrounds/new', (req: Request, res: Response) => {
+  app.get('/campgrounds/new', (req, res) => {
   res.render('campgrounds/new');
 });
 
-app.post('/campgrounds', async (req: Request, res: Response) => {
-  const campground = new Campground(req.body.campground);
+app.post('/campgrounds', validateCampground, async (req, res) => {
   try {
+    const campground = new Campground(req.body.campground);
     await campground.save();
     console.log(chalk.green('✅Campground criado com sucesso!'));
     res.redirect(`/campgrounds/${campground._id}`);
@@ -58,17 +62,12 @@ app.post('/campgrounds', async (req: Request, res: Response) => {
   }
 });
 
-  app.get('/campgrounds/:id', async (req: Request, res: Response) => {
-  try {
+  app.get('/campgrounds/:id', async (req, res) => {
     const campground = await Campground.findById(req.params.id);
     res.render('campgrounds/show', { campground });
-  } catch (err) {
-    console.error(chalk.red('Erro ao buscar campground:', err));
-    res.status(500).send('Erro ao buscar campground');
-  }
-});
+  });
 
-app.get('/campgrounds/:id/edit', async (req: Request, res: Response) => {
+app.get('/campgrounds/:id/edit', async (req, res) => {
   try {
     const campground = await Campground.findById(req.params.id);
     res.render('campgrounds/edit', { campground });
@@ -78,7 +77,7 @@ app.get('/campgrounds/:id/edit', async (req: Request, res: Response) => {
   }
 });
 
-app.put('/campgrounds/:id', async (req: Request, res: Response) => {
+app.put('/campgrounds/:id', validateCampground, async (req, res) => {
   const { id } = req.params;
   try {
     await Campground.findByIdAndUpdate(id, req.body.campground, { new: true });
@@ -90,7 +89,7 @@ app.put('/campgrounds/:id', async (req: Request, res: Response) => {
   }
 });
 
-app.delete('/campgrounds/:id', async (req: Request, res: Response) => {
+app.delete('/campgrounds/:id', async (req, res) => {
   const { id } = req.params;
   try {
     await Campground.findByIdAndDelete(id);
@@ -100,6 +99,14 @@ app.delete('/campgrounds/:id', async (req: Request, res: Response) => {
     console.error(chalk.red('Erro ao deletar campground:', err));
     res.status(500).send('Erro ao deletar campground');
   }
+});
+app.all(/(.*)/, (req, res, next) => {
+  next(new ExpressError('Page Not Found', 404));
+});
+
+app.use((err: ExpressError, req: Request, res: Response, next: NextFunction) => {
+  const { statusCode = 500, message = 'Internal Server Error' } = err;
+  res.status(statusCode).render('error', { err, title: 'Error' });
 });
 
 app.listen(port, () => {
