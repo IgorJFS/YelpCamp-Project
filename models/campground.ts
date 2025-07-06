@@ -7,6 +7,7 @@ export interface ICampground extends Document {
   price: number;
   description: string;
   location: string;
+  reviews: Schema.Types.ObjectId[]; // Array de ObjectId que referenciam o modelo Review
 }
 
 // 2. Criar o schema baseado nos tipos da interface
@@ -16,6 +17,10 @@ const CampgroundSchema = new Schema<ICampground>({
   price: { type: Number, required: true },
   description: { type: String, required: true },
   location: { type: String, required: true },
+  reviews: [{
+    type: Schema.Types.ObjectId,
+    ref: "Review"
+  }]
 });
 
 // 3. Exportar o model
