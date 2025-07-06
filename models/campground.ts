@@ -1,6 +1,7 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Mongoose } from 'mongoose';
+import Review from './review';
 
-// 1. Criar uma interface com os tipos das propriedades
+//Isso aqui é apenas extra para o TypeScript entender que estamos usando o Mongoose
 export interface ICampground extends Document {
   title: string;
   image: string;
@@ -10,7 +11,6 @@ export interface ICampground extends Document {
   reviews: Schema.Types.ObjectId[]; // Array de ObjectId que referenciam o modelo Review
 }
 
-// 2. Criar o schema baseado nos tipos da interface
 const CampgroundSchema = new Schema<ICampground>({
   title: { type: String, required: true },
   image: { type: String, required: true },
@@ -23,6 +23,13 @@ const CampgroundSchema = new Schema<ICampground>({
   }]
 });
 
-// 3. Exportar o model
+CampgroundSchema.post('findOneAndDelete', async function (doc){
+  if (doc) {
+    await Review.deleteMany({
+      _id: { $in: doc.reviews }
+    })
+  }    
+})
+
 const Campground = model<ICampground>('Campground', CampgroundSchema);
 export default Campground;

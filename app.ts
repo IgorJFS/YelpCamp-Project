@@ -1,15 +1,17 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import session from 'express-session';
 import mongoose from 'mongoose';
 import chalk from 'chalk';
 import ExpressError from './utils/expressError';
-import catchAsync from './utils/catchAsync';
-import Campground from './models/campground'; 
 import methodOverride from 'method-override';
-import { validateCampground } from './middlewares/validateCampground';
-import { validateReview } from './middlewares/validateReview';
-import Review from './models/review'; // Importando o modelo de Review
+import campgrounds from './routes/campgrounds'; // Importando as rotas de campgrounds
+import reviews from './routes/reviews'; // Importando as rotas de reviews
+import dotenv from 'dotenv';
+import flash from 'connect-flash';
 const ejsMate = require('ejs-mate');
+
+dotenv.config();
 
 //conexão com o banco de dados MongoDB
 async function connectDb() {
@@ -31,7 +33,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.urlencoded({ extended: true })); 
-app.use(methodOverride('_method')); // isso aqui permite o uso de métodos HTTP como PUT e DELETE com a porra do EJS
+app.use(methodOverride('_method')); // isso aqui permite o uso de métodos HTTP como PUT e DELETE com EJS
 
 const port = 3000;
 
@@ -39,62 +41,27 @@ app.get('/', (req, res) => {
   res.render('home', { title: 'YelpCamp' });
 });
 
-app.get('/campgrounds', catchAsync(async (req, res) => {
-  const campgrounds = await Campground.find({});
-  res.render('campgrounds/index', { campgrounds });
-}));
 
- app.get('/campgrounds/new', (req, res) => {
-  res.render('campgrounds/new');
+app.use(express.static(path.join(__dirname, 'public'))); // isso aqui serve arquivos estáticos como CSS e JS
+const sessionConfig = {
+  secret: 'sillysecret',
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    httpOnly: true, // isso aqui impede que o cookie seja acessado via JavaScript
+    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+  }
+}
+app.use(session(sessionConfig)); 
+app.use(flash());
+app.use((req, res, next) => {
+  res.locals.success = req.flash('success');
+  res.locals.error = req.flash('error');
+  next();
 });
 
-app.post('/campgrounds', validateCampground, catchAsync(async (req, res) => {
-  const campground = new Campground(req.body.campground);
-  await campground.save();
-  console.log(chalk.green('✅Campground criado com sucesso!'));
-  res.redirect(`/campgrounds/${campground._id}`);
-}));
-
-app.get('/campgrounds/:id', catchAsync(async (req, res) => {
-    const campground = await Campground.findById(req.params.id);
-    if (!campground) {
-        throw new ExpressError('Campground not found', 404);
-      }
-      res.render('campgrounds/show', { campground });
-  }));
-
-app.get('/campgrounds/:id/edit', catchAsync(async (req, res) => {
-  const campground = await Campground.findById(req.params.id);
-  res.render('campgrounds/edit', { campground });
-}));
-
-
-app.put('/campgrounds/:id', validateCampground, catchAsync(async (req, res) => {
-  const { id } = req.params;
-    await Campground.findByIdAndUpdate(id, req.body.campground, { new: true });
-    console.log(chalk.blue('Campground atualizado com sucesso!'));
-    res.redirect(`/campgrounds/${id}`);
-}));
-
-app.delete('/campgrounds/:id', catchAsync(async (req, res) => {
-    const { id } = req.params;
-    await Campground.findByIdAndDelete(id);
-    console.log(chalk.blue(`Campground deletado com sucesso!`));
-    res.redirect('/campgrounds');
-}));
-
-app.post('/campgrounds/:id/reviews', validateReview, catchAsync(async (req, res) => {
-  const campground = await Campground.findById(req.params.id);
-  if (!campground) {
-    throw new ExpressError('Campground not found', 404);
-  }
-  const review = new Review(req.body.review);
-  campground.reviews.push(review as any); 
-  await review.save();
-  await campground.save();
-  console.log(chalk.green('Review successfully added!'));
-  res.redirect(`/campgrounds/${campground._id}`);
-}));
+app.use('/campgrounds', campgrounds); 
+app.use('/campgrounds/:id/reviews', reviews); 
 
 app.all(/(.*)/, (req, res, next) => {
   next(new ExpressError('Page Not Found', 404));
