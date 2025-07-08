@@ -27,13 +27,18 @@ router.post('/', validateCampground, catchAsync(async (req, res) => {
 router.get('/:id', catchAsync(async (req, res) => {
     const campground = await Campground.findById(req.params.id).populate('reviews'); // Populando os reviews pro mongodb
     if (!campground) {
-        throw new ExpressError('Campground not found', 404);
+        req.flash('error', 'Campground not found!');
+        return res.redirect('/campgrounds');
       }
       res.render('campgrounds/show', { campground });
   }));
 
 router.get('/:id/edit', catchAsync(async (req, res) => {
   const campground = await Campground.findById(req.params.id);
+  if (!campground) {
+      req.flash('error', 'Campground not found!');
+      return res.redirect('/campgrounds');
+  }
   res.render('campgrounds/edit', { campground });
 }));
 
@@ -42,6 +47,7 @@ router.put('/:id', validateCampground, catchAsync(async (req, res) => {
   const { id } = req.params;
     await Campground.findByIdAndUpdate(id, req.body.campground, { new: true });
     console.log(chalk.blue('Campground atualizado com sucesso!'));
+    req.flash('success', 'Campground successfully updated!');
     res.redirect(`/campgrounds/${id}`);
 }));
 
@@ -49,6 +55,7 @@ router.delete('/:id', catchAsync(async (req, res) => {
     const { id } = req.params;
     await Campground.findByIdAndDelete(id);
     console.log(chalk.blue(`Campground deletado com sucesso!`));
+    req.flash('success', 'Campground successfully deleted!');
     res.redirect('/campgrounds');
 }));
 
